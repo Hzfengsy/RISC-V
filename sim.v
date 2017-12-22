@@ -5,12 +5,12 @@ module sim();
     reg     rst;
     initial begin
         CLOCK_50 = 1'b0;
-        forever #10 CLOCK_50 = ~CLOCK_50;
+        forever #2 CLOCK_50 = ~CLOCK_50;
     end
       
     initial begin
         rst = 1'b1;
-        #195 rst= 1'b0;
+        #30 rst= 1'b0;
         #4100 $stop;
     end
        

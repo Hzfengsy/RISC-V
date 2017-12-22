@@ -37,10 +37,11 @@ module ID
     output reg                 write_op,
     output wire[`DATA_WIDTH]   inst_o,
 
+    output reg [`DATA_WIDTH]   mem_wdata,
     output reg                 next_inst_in_delayslot,
 	output reg                 branch_flag,
-	output reg[`DATA_WIDTH]    branch_target_address,       
-	output reg[`DATA_WIDTH]    link_addr,
+	output reg [`DATA_WIDTH]   branch_target_address,       
+	output reg [`DATA_WIDTH]   link_addr,
 	output reg                 is_in_delayslot_o,
 	output wire                stallreq
 );
@@ -49,6 +50,7 @@ module ID
     wire[`DATA_WIDTH] pc_plus_8;
     wire[`DATA_WIDTH] pc_plus_4;
     wire[`DATA_WIDTH] imm_JAL;
+    wire[`DATA_WIDTH] imm_BRANCH;
     reg [`DATA_WIDTH] imm;
     wire [6:0] funct7 = inst_i[31:25];
     wire [2:0] funct3 = inst_i[14:12];
@@ -63,10 +65,11 @@ module ID
 
     assign pc_plus_8 = addr + 8;
     assign pc_plus_4 = addr + 4;
-    assign imm_JAL = {11'b0, inst_i[31], inst_i[19:12], inst_i[20], inst_i[30:21], 1'b0};  
+    assign imm_JAL = {11'b0, inst_i[31], inst_i[19:12], inst_i[20], inst_i[30:21], 1'b0};
+    assign imm_BRANCH = {19'b0, inst_i[31], inst_i[7], inst_i[31:25], inst_i[11:8], 1'b0};
     assign stallreq = stallreq_for_reg1_loadrelate | stallreq_for_reg2_loadrelate;
 
-    //assign pre_inst_is_load = 
+    assign pre_inst_is_load = (ex_aluop == `ALU_LB || ex_aluop == `ALU_LH || ex_aluop == `ALU_LW || ex_aluop == `ALU_LBU || ex_aluop == `ALU_LHU) ? 1 : 0;
     assign inst_o = inst_i;
 
     
@@ -86,6 +89,7 @@ module ID
 			branch_target_address  <= `ZeroWord;
 			branch_flag            <= 1'b0;
 			next_inst_in_delayslot <= 1'b0;	
+            mem_wdata              <= `ZeroWord;
         end else begin
             case (opcode)
                 `OP_LUI: begin
@@ -102,7 +106,9 @@ module ID
 			        branch_target_address  <= `ZeroWord;
 			        branch_flag            <= 1'b0;
 			        next_inst_in_delayslot <= 1'b0;
+                    mem_wdata              <= `ZeroWord;
                 end
+
                 `OP_AUIPC: begin
                     ALU_op                 <= `ALU_AUIPC;
 			        rd                     <= rd_;
@@ -117,7 +123,9 @@ module ID
 			        branch_target_address  <= `ZeroWord;
 			        branch_flag            <= 1'b0;
 			        next_inst_in_delayslot <= 1'b0;
+                    mem_wdata              <= `ZeroWord;
                 end
+
                 `OP_JAL: begin
                     ALU_op                 <= `ALU_JMP;
 			        rd                     <= rd_;
@@ -132,8 +140,9 @@ module ID
 			        branch_target_address  <= addr + imm_JAL;
 			        branch_flag            <= 1'b1;
 			        next_inst_in_delayslot <= 1'b0;
-
+                    mem_wdata              <= `ZeroWord;
                 end
+
                 `OP_JALR: begin
                     ALU_op                 <= `ALU_JMP;
 			        rd                     <= rd_;
@@ -148,6 +157,102 @@ module ID
 			        branch_target_address  <= reg1_data + {20'd0, inst_i[31:20]};
 			        branch_flag            <= 1'b1;
 			        next_inst_in_delayslot <= 1'b0;
+                    mem_wdata              <= `ZeroWord;
+                end
+
+                `OP_BRANCH: begin
+                    ALU_op                 <= `ALU_BRANCH;
+			        rd                     <= rd_;
+			        write_op               <= 1'b0;
+			        instvalid              <= 1;
+			        reg1_op                <= `Reg_OP;
+			        reg2_op                <= `Reg_OP;
+			        reg1_addr              <= rs1;
+			        reg2_addr              <= rs2;
+			        imm                    <= `ZeroWord;	
+			        link_addr              <= pc_plus_4;
+			        next_inst_in_delayslot <= 1'b0;
+                    mem_wdata              <= `ZeroWord;
+                    case (funct3)
+                        `FUNCT3_BEQ: begin
+                            branch_flag <= (reg1_data == reg2_data) ? 1'b1 : 1'b0;
+                        end
+                        `FUNCT3_BNE: begin
+                            branch_flag <= (reg1_data != reg2_data) ? 1'b1 : 1'b0;
+                        end
+                        `FUNCT3_BLT: begin
+                            branch_flag <= ($signed(reg1_data) < $signed(reg2_data)) ? 1'b1 : 1'b0;
+                        end
+                        `FUNCT3_BLTU: begin
+                            branch_flag <= (reg1_data < reg2_data) ? 1'b1 : 1'b0;
+                        end
+                        `FUNCT3_BGE: begin
+                            branch_flag <= ($signed(reg1_data) >= $signed(reg2_data)) ? 1'b1 : 1'b0;
+                        end
+                        `FUNCT3_BGEU: begin
+                            branch_flag <= (reg1_data >= reg2_data) ? 1'b1 : 1'b0;
+                        end
+                    endcase
+                end
+
+                `OP_LOAD: begin
+			        write_op               <= 1'b1;
+                    rd                     <= rd_;
+			        instvalid              <= 1;
+			        reg1_op                <= `Reg_OP;
+			        reg2_op                <= `Zero_OP;
+			        reg1_addr              <= rs1;
+			        reg2_addr              <= `ZeroReg;
+			        imm                    <= `ZeroWord;
+			        link_addr              <= `ZeroWord;
+			        branch_target_address  <= `ZeroWord;
+			        branch_flag            <= 1'b0;
+			        next_inst_in_delayslot <= 1'b0;
+                    mem_wdata              <= `ZeroWord;
+                    case(funct3)
+                        `FUNCT3_LB: begin
+                            ALU_op  <= `ALU_LB;
+                        end
+                        `FUNCT3_LH: begin
+                            ALU_op  <= `ALU_LH;
+                        end
+                        `FUNCT3_LW: begin
+                            ALU_op  <= `ALU_LW;
+                        end
+                        `FUNCT3_LBU: begin
+                            ALU_op  <= `ALU_LBU;
+                        end
+                        `FUNCT3_LHU: begin
+                            ALU_op  <= `ALU_LHU;
+                        end
+                    endcase
+                end
+
+                `OP_STORE: begin
+			        write_op               <= 1'b0;
+                    rd                     <= rd_;
+			        instvalid              <= 1;
+			        reg1_op                <= `Reg_OP;
+			        reg2_op                <= `Reg_OP;
+			        reg1_addr              <= rs1;
+			        reg2_addr              <= rs2;
+			        imm                    <= `ZeroWord;
+			        link_addr              <= `ZeroWord;
+			        branch_target_address  <= `ZeroWord;
+			        branch_flag            <= 1'b0;
+			        next_inst_in_delayslot <= 1'b0;
+                    mem_wdata              <= `ZeroWord;
+                    case(funct3)
+                        `FUNCT3_SB: begin
+                            ALU_op  <= `ALU_SB;
+                        end
+                        `FUNCT3_SH: begin
+                            ALU_op  <= `ALU_SH;
+                        end
+                        `FUNCT3_SW: begin
+                            ALU_op  <= `ALU_SW;
+                        end
+                    endcase
                 end
 
                 `OP_OP_IMM: begin
@@ -162,34 +267,35 @@ module ID
 			        branch_target_address  <= `ZeroWord;
 			        branch_flag            <= 1'b0;
 			        next_inst_in_delayslot <= 1'b0;
+                    mem_wdata              <= `ZeroWord;
                     case (funct3)
                         `FUNCT3_ADDI: begin
                             ALU_op                 <= `ALU_ADD;
-                            imm                    <= {20'd0, inst_i[31:20]};	
+                            imm                    <= {{20{inst_i[31]}}, inst_i[31:20]};	
                         end
                         `FUNCT3_SLTI: begin
                             ALU_op                 <= `ALU_SLT;
-                            imm                    <= {20'd0, inst_i[31:20]};	
+                            imm                    <= {{20{inst_i[31]}}, inst_i[31:20]};	
                         end
                         `FUNCT3_SLTIU: begin
                             ALU_op                 <= `ALU_SLTU;
-                            imm                    <= {20'd0, inst_i[31:20]};	
+                            imm                    <= {{20{inst_i[31]}}, inst_i[31:20]};	
                         end
                         `FUNCT3_XORI: begin
                             ALU_op                 <= `ALU_XOR;
-                            imm                    <= {20'd0, inst_i[31:20]};	
+                            imm                    <= {{20{inst_i[31]}}, inst_i[31:20]};	
                         end
                         `FUNCT3_ORI: begin
                             ALU_op                 <= `ALU_OR;
-                            imm                    <= {20'd0, inst_i[31:20]};	
+                            imm                    <= {{20{inst_i[31]}}, inst_i[31:20]};	
                         end
                         `FUNCT3_ANDI: begin
                             ALU_op                 <= `ALU_AND;
-                            imm                    <= {20'd0, inst_i[31:20]};	
+                            imm                    <= {{20{inst_i[31]}}, inst_i[31:20]};	
                         end
                         `FUNCT3_SLLI: begin
                             ALU_op                 <= `ALU_SLL;
-                            imm                    <= {27'd0, inst_i[24:20]};	
+                            imm                    <= {{20{inst_i[31]}}, inst_i[24:20]};	
                         end
                         `FUNCT3_SRLI_SRAI: begin
                             case (funct7)
@@ -214,6 +320,7 @@ module ID
 			        branch_target_address  <= `ZeroWord;
 			        branch_flag            <= 1'b0;
 			        next_inst_in_delayslot <= 1'b0;
+                    mem_wdata              <= `ZeroWord;
                     case (funct3)
                         `FUNCT3_ADD_SUB: begin
                             case (funct7)
@@ -251,7 +358,7 @@ module ID
                     ALU_op                 <= `ALU_NOP;
                     rd                     <= 5'b00000;
                     write_op               <= 1'b0;
-                    instvalid              <= 1;
+                    instvalid              <= 1'b0;
                     reg1_op                <= 2'b00;
                     reg2_op                <= 2'b00;
                     reg1_addr              <= 5'b00000;

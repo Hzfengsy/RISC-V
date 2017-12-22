@@ -11,6 +11,7 @@ module EX(
     input [`REG_WIDTH]    rd,
     input                 rd_op,
     input [`DATA_WIDTH]   inst_i,
+    input [`DATA_WIDTH]   mem_wdata_i,
 
 
     input [`DATA_WIDTH]   link_address_i,
@@ -19,18 +20,26 @@ module EX(
     output reg[`REG_WIDTH]     rd_o,
     output reg                 rd_op_o,
     output reg[`DATA_WIDTH]    rd_data,
+    output wire[`DATA_WIDTH]   mem_wdata_o,
 
     output wire[`ALU_OP_WIDTH] AluOP_o,
-    output wire[`DATA_WIDTH]   mem_addr_o,
+    output reg[`DATA_WIDTH]    mem_addr_o,
 
     output reg                 stallreq  
     );
     assign AluOP_o = AluOP;
-    assign mem_addr_o = `ZeroWord;
+    assign mem_wdata_o = src2;
+    wire [`DATA_WIDTH] load_addr;
+    wire [`DATA_WIDTH] store_addr;
+    assign load_addr = {{20{inst_i[31]}}, inst_i[31:20]};
+    assign store_addr = {{20{inst_i[31]}}, inst_i[31:25], inst_i[11:7]};
 
     always @(*) begin
         if(RST) begin
-            rd_data <= 0;
+            rd_o       <= `ZeroReg;
+            rd_op_o    <= 0'b0;
+            rd_data    <= `ZeroWord;
+            mem_addr_o <= `ZeroWord;
         end else begin
             rd_o     <= rd;
             rd_op_o  <= rd_op;
@@ -47,7 +56,17 @@ module EX(
                 `ALU_SEQ :    rd_data <= src1 == src2 ? 32'b1 : 32'b0;
                 `ALU_SLT :    rd_data <= $signed(src1) < $signed(src2) ? 32'b1 : 32'b0;
                 `ALU_SLTU:    rd_data <= src1 < src2 ? 32'b1 : 32'b0;
-                default:      rd_data <= link_address_i;
+                //load
+                `ALU_LB  :    mem_addr_o <= src1 + load_addr;
+                `ALU_LH  :    mem_addr_o <= src1 + load_addr;
+                `ALU_LW  :    mem_addr_o <= src1 + load_addr;
+                `ALU_LBU :    mem_addr_o <= src1 + load_addr;
+                `ALU_LHU :    mem_addr_o <= src1 + load_addr;
+                //store
+                `ALU_SB  :    mem_addr_o <= src1 + store_addr;
+                `ALU_SH  :    mem_addr_o <= src1 + store_addr;
+                `ALU_SW  :    mem_addr_o <= src1 + store_addr;
+                default  :    rd_data <= link_address_i;
             endcase
         end
     end

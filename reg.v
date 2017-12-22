@@ -5,8 +5,8 @@ module regist
 (
     input CLK,
     input RST,
-    input read_op1, 
-    input read_op2,
+    input [1:0] read_op1, 
+    input [1:0] read_op2,
     input [`REG_WIDTH] read_addr1, 
     input [`REG_WIDTH] read_addr2,
     input write_op,
@@ -33,7 +33,7 @@ module regist
         if (RST) begin
             read_data1 <= `ZeroWord;
         end else begin
-            if (read_op1) begin
+            if (read_op1 != `Zero_OP) begin
                 if (write_op && write_addr == read_addr1 && write_addr != `ZeroReg) begin
                     read_data1 <= write_data;
                 end else begin
@@ -49,7 +49,7 @@ module regist
         if (RST) begin
             read_data2 <= `ZeroWord;
         end else begin
-            if (read_op2) begin
+            if (read_op2 != `Zero_OP) begin
                 if (write_op && write_addr == read_addr2 && write_addr != `ZeroReg) begin
                     read_data2 <= write_data;
                 end else begin
