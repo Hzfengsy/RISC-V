@@ -11,7 +11,7 @@ module inst_rom
     wire [`DATA_WIDTH] tmp_inst = inst_mem[addr[`InstMemNumLog2+1:2]];
 
 	initial begin
-	   $readmemh ("C:/Users/59572/RISC-V/inst_rom.data", inst_mem);
+	   $readmemh ("C:/Users/59572/RISC-V/inst_rom.mem", inst_mem);
 	end
 	assign inst = (RST) ? `ZeroWord : {tmp_inst[7:0], tmp_inst[15:8], tmp_inst[23:16], tmp_inst[31:24]};
 	// always @ (*) begin

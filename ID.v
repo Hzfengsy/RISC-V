@@ -65,8 +65,8 @@ module ID
 
     assign pc_plus_8 = addr + 8;
     assign pc_plus_4 = addr + 4;
-    assign imm_JAL = {11'b0, inst_i[31], inst_i[19:12], inst_i[20], inst_i[30:21], 1'b0};
-    assign imm_BRANCH = {19'b0, inst_i[31], inst_i[7], inst_i[31:25], inst_i[11:8], 1'b0};
+    assign imm_JAL = {{11{inst_i[31]}}, inst_i[31], inst_i[19:12], inst_i[20], inst_i[30:21], 1'b0};
+    assign imm_BRANCH = {{19{inst_i[31]}}, inst_i[31], inst_i[7], inst_i[30:25], inst_i[11:8], 1'b0};
     assign stallreq = stallreq_for_reg1_loadrelate | stallreq_for_reg2_loadrelate;
 
     assign pre_inst_is_load = (ex_aluop == `ALU_LB || ex_aluop == `ALU_LH || ex_aluop == `ALU_LW || ex_aluop == `ALU_LBU || ex_aluop == `ALU_LHU) ? 1 : 0;
@@ -154,7 +154,7 @@ module ID
 			        reg2_addr              <= `ZeroReg;
 			        imm                    <= `ZeroWord;	
 			        link_addr              <= pc_plus_4;
-			        branch_target_address  <= reg1_data + {20'd0, inst_i[31:20]};
+			        branch_target_address  <= src_1 + {20'd0, inst_i[31:20]};
 			        branch_flag            <= 1'b1;
 			        next_inst_in_delayslot <= 1'b0;
                     mem_wdata              <= `ZeroWord;
@@ -170,27 +170,28 @@ module ID
 			        reg1_addr              <= rs1;
 			        reg2_addr              <= rs2;
 			        imm                    <= `ZeroWord;	
-			        link_addr              <= pc_plus_4;
+			        link_addr              <= `ZeroWord;
+                    branch_target_address  <= addr + imm_BRANCH;
 			        next_inst_in_delayslot <= 1'b0;
                     mem_wdata              <= `ZeroWord;
                     case (funct3)
                         `FUNCT3_BEQ: begin
-                            branch_flag <= (reg1_data == reg2_data) ? 1'b1 : 1'b0;
+                            branch_flag <= (src_1 == src_2) ? 1'b1 : 1'b0;
                         end
                         `FUNCT3_BNE: begin
-                            branch_flag <= (reg1_data != reg2_data) ? 1'b1 : 1'b0;
+                            branch_flag <= (src_1 != src_2) ? 1'b1 : 1'b0;
                         end
                         `FUNCT3_BLT: begin
-                            branch_flag <= ($signed(reg1_data) < $signed(reg2_data)) ? 1'b1 : 1'b0;
+                            branch_flag <= ($signed(src_1) < $signed(src_2)) ? 1'b1 : 1'b0;
                         end
                         `FUNCT3_BLTU: begin
-                            branch_flag <= (reg1_data < reg2_data) ? 1'b1 : 1'b0;
+                            branch_flag <= (src_1 < src_2) ? 1'b1 : 1'b0;
                         end
                         `FUNCT3_BGE: begin
-                            branch_flag <= ($signed(reg1_data) >= $signed(reg2_data)) ? 1'b1 : 1'b0;
+                            branch_flag <= ($signed(src_1) >= $signed(src_2)) ? 1'b1 : 1'b0;
                         end
                         `FUNCT3_BGEU: begin
-                            branch_flag <= (reg1_data >= reg2_data) ? 1'b1 : 1'b0;
+                            branch_flag <= (src_1 >= src_2) ? 1'b1 : 1'b0;
                         end
                     endcase
                 end
@@ -400,7 +401,7 @@ module ID
                     src_1 <= `ZeroWord;
                 end
                 `Reg_OP: begin
-                    if (pre_inst_is_load && ex_reg_op == reg1_addr) begin
+                    if (pre_inst_is_load && ex_reg_op && ex_rd == reg1_addr) begin
                         stallreq_for_reg1_loadrelate <= 1'b1;
                     end else if (ex_reg_op && (ex_rd == reg1_addr)&& (reg1_addr != `ZeroReg)) begin
                         src_1 <= ex_data;
@@ -430,7 +431,7 @@ module ID
                     src_2 <= `ZeroWord;
                 end
                 `Reg_OP: begin
-                    if (pre_inst_is_load && ex_reg_op == reg2_addr) begin
+                    if (pre_inst_is_load && ex_reg_op && ex_rd == reg2_addr) begin
                         stallreq_for_reg2_loadrelate <= 1'b1;
                     end else if (ex_reg_op && (ex_rd == reg2_addr) && (reg2_addr != `ZeroReg)) begin
                         src_2 <= ex_data;
