@@ -99,7 +99,7 @@ module ID
 			        instvalid              <= 1;
 			        reg1_op                <= `Imm_OP;
 			        reg2_op                <= `Zero_OP;
-			        reg1_addr              <= 1'b00000;
+			        reg1_addr              <= `ZeroReg;
 			        reg2_addr              <= `ZeroReg;
 			        imm                    <= {inst_i[31:12], 12'd0};	
 			        link_addr              <= `ZeroWord;
@@ -116,7 +116,7 @@ module ID
 			        instvalid              <= 1;
 			        reg1_op                <= `Imm_OP;
 			        reg2_op                <= `PC_OP;
-			        reg1_addr              <= 1'b00000;
+			        reg1_addr              <= `ZeroReg;
 			        reg2_addr              <= `ZeroReg;
 			        imm                    <= {inst_i[31:12], 12'd0};	
 			        link_addr              <= `ZeroWord;

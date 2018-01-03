@@ -10,9 +10,8 @@ module RISC_V(
 	wire[`DATA_WIDTH] inst;
 	
 	wire[`ADDR_WIDTH] mem_addr_i;
-	wire[`DATA_WIDTH] mem_data_i;
-	wire[`DATA_WIDTH] mem_data_o;
-	wire[3:0] mem_mask_i;   
+	wire[255:0] mem_data_i;
+	wire[255:0] mem_data_o;
 	wire mem_write_op_i; 
 	wire mem_read_op_i;
  
@@ -29,7 +28,6 @@ module RISC_V(
 		.ram_read_op(mem_read_op_i),
 		.ram_write_op(mem_write_op_i),
 		.ram_addr(mem_addr_i),
-		.ram_mask(mem_mask_i),
 		.ram_data_o(mem_data_i)
 	);
 	
@@ -44,9 +42,8 @@ module RISC_V(
 		.read_op(mem_read_op_i),
 		.write_op(mem_write_op_i),
 		.addr(mem_addr_i),
-		.mask(mem_mask_i),
 		.data_i(mem_data_i),
-		.data_o(mem_data_o)	
+		.data_o(mem_data_o)
 	);
 
 endmodule

@@ -5,10 +5,10 @@
 `define ALU_OP_WIDTH 4:0
 `define BYTE_WIDTH   7:0
 
-`define DataMemNum 131071
-`define InstMemNum 131071
-`define DataMemNumLog2 17
-`define InstMemNumLog2 17
+`define DataMemNum 1024
+`define InstMemNum 1024
+`define DataMemNumLog2 10
+`define InstMemNumLog2 10
 
 `define ZeroWord 32'h00000000
 `define ZeroReg  5'b00000
@@ -115,3 +115,14 @@
 `define FUNCT7_SRA 7'b0100000
 `define FUNCT7_OR  7'b0000000
 `define FUNCT7_AND 7'b0000000
+
+//================== Data Cache ================== 
+`define SET_WIDTH       1:0
+`define SET_NUM           2
+`define TAG_WIDTH      21:0
+`define INDEX_WIDTH     4:0
+`define SELECT_WIDTH    4:0
+`define DATA_ROW_WIDTH 31:0
+`define DATA_ROWS        32
+`define DATA_COL_WIDTH  7:0
+`define DATA_COLS         8

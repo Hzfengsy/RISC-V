@@ -45,28 +45,30 @@ module EX(
             rd_op_o  <= rd_op;
             stallreq <= 1'b0;
             case(AluOP)
-                `ALU_ADD :    rd_data <= src1 + src2;
-                `ALU_SUB :    rd_data <= src1 - src2;
-                `ALU_AND :    rd_data <= src1 & src2;
-                `ALU_OR  :    rd_data <= src1 | src2;
-                `ALU_XOR :    rd_data <= src1 ^ src2;
-                `ALU_SLL :    rd_data <= src1 << src2[4:0];
-                `ALU_SRL :    rd_data <= src1 >> src2[4:0];
-                `ALU_SRA :    rd_data <= $signed(src1) >>> src2[4:0];
-                `ALU_SEQ :    rd_data <= src1 == src2 ? 32'b1 : 32'b0;
-                `ALU_SLT :    rd_data <= $signed(src1) < $signed(src2) ? 32'b1 : 32'b0;
-                `ALU_SLTU:    rd_data <= src1 < src2 ? 32'b1 : 32'b0;
-                //load
-                `ALU_LB  :    mem_addr_o <= src1 + load_addr;
-                `ALU_LH  :    mem_addr_o <= src1 + load_addr;
-                `ALU_LW  :    mem_addr_o <= src1 + load_addr;
-                `ALU_LBU :    mem_addr_o <= src1 + load_addr;
-                `ALU_LHU :    mem_addr_o <= src1 + load_addr;
-                //store
-                `ALU_SB  :    mem_addr_o <= src1 + store_addr;
-                `ALU_SH  :    mem_addr_o <= src1 + store_addr;
-                `ALU_SW  :    mem_addr_o <= src1 + store_addr;
-                default  :    rd_data <= link_address_i;
+                `ALU_LUI  :   rd_data <= src1;
+                `ALU_AUIPC:   rd_data <= src1 + src2;
+                `ALU_ADD  :   rd_data <= src1 + src2;
+                `ALU_SUB  :   rd_data <= src1 - src2;
+                `ALU_AND  :   rd_data <= src1 & src2;
+                `ALU_OR   :   rd_data <= src1 | src2;
+                `ALU_XOR  :   rd_data <= src1 ^ src2;
+                `ALU_SLL  :   rd_data <= src1 << src2[4:0];
+                `ALU_SRL  :   rd_data <= src1 >> src2[4:0];
+                `ALU_SRA  :   rd_data <= $signed(src1) >>> src2[4:0];
+                `ALU_SEQ  :   rd_data <= src1 == src2 ? 32'b1 : 32'b0;
+                `ALU_SLT  :   rd_data <= $signed(src1) < $signed(src2) ? 32'b1 : 32'b0;
+                `ALU_SLTU :   rd_data <= src1 < src2 ? 32'b1 : 32'b0;
+                // load
+                `ALU_LB   :   mem_addr_o <= src1 + load_addr;
+                `ALU_LH   :   mem_addr_o <= src1 + load_addr;
+                `ALU_LW   :   mem_addr_o <= src1 + load_addr;
+                `ALU_LBU  :   mem_addr_o <= src1 + load_addr;
+                `ALU_LHU  :   mem_addr_o <= src1 + load_addr;
+                // store
+                `ALU_SB   :   mem_addr_o <= src1 + store_addr;
+                `ALU_SH   :   mem_addr_o <= src1 + store_addr;
+                `ALU_SW   :   mem_addr_o <= src1 + store_addr;
+                default   :   rd_data <= link_address_i;
             endcase
         end
     end

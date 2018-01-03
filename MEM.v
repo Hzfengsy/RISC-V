@@ -14,6 +14,7 @@ module mem(
     
     //from mem
     input [`DATA_WIDTH]     mem_data,
+    input busy,
     
     //to writeback
     output reg[`REG_WIDTH]  rd_o,
@@ -25,7 +26,9 @@ module mem(
     output reg              mem_write,
     output reg              mem_read,
     output reg[3:0]         mem_mask,
-    output reg[`DATA_WIDTH] mem_wdata
+    output reg[`DATA_WIDTH] mem_wdata,
+
+    output reg              stallreq
 );
 
     always @(*) begin
@@ -38,10 +41,12 @@ module mem(
             mem_read   <= 1'b0;
             mem_mask   <= 4'b0000;
             mem_wdata  <= `ZeroWord;
+            stallreq   <= 1'b0;
         end
         else begin
-            rd_o    <= rd;
-            rd_op_o <= rd_op;
+            stallreq <= busy;
+            rd_o     <= rd;
+            rd_op_o  <= rd_op;
             case (AluOP)
                 `ALU_LB: begin
                     mem_addr_o <= {mem_addr[31:2], 2'b00};
@@ -104,7 +109,7 @@ module mem(
                     mem_write  <= 1'b1;
                     mem_read   <= 1'b0;
                     mem_mask   <= 1'b1 << mem_addr[1:0];
-                    mem_wdata  <= mem_wdata_i << mem_addr[1:0];
+                    mem_wdata  <= mem_wdata_i << (8 * mem_addr[1:0]);
                     rd_data_o  <= `ZeroWord;
                 end
                 `ALU_SH: begin
@@ -112,7 +117,7 @@ module mem(
                     mem_write  <= 1'b1;
                     mem_read   <= 1'b0;
                     mem_mask   <= 2'b11 << mem_addr[1:0];
-                    mem_wdata  <= mem_wdata_i << mem_addr[1:0];
+                    mem_wdata  <= mem_wdata_i << (8 * mem_addr[1:0]);
                     rd_data_o  <= `ZeroWord;
                 end
                 `ALU_SW: begin
