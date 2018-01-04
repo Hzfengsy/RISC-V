@@ -5,10 +5,10 @@
 `define ALU_OP_WIDTH 4:0
 `define BYTE_WIDTH   7:0
 
-`define DataMemNum 1024
-`define InstMemNum 1024
-`define DataMemNumLog2 10
-`define InstMemNumLog2 10
+`define DataMemNum 131071
+`define InstMemNum 131071
+`define DataMemNumLog2 17
+`define InstMemNumLog2 17
 
 `define ZeroWord 32'h00000000
 `define ZeroReg  5'b00000
