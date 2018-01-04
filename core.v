@@ -7,15 +7,15 @@ module core(
 	input RST,
 	
  
-	input [`DATA_WIDTH]         rom_data_i,
-	output wire[`DATA_WIDTH]    rom_addr_o,
-	output wire                 rom_ce_o,
+	output wire                 rom_read_op,
+	input [255:0]               rom_data_i,
+	output wire [`DATA_WIDTH]   rom_addr_o,
 	
-	input [255:0]         ram_data_i,
+	input [255:0]               ram_data_i,
     output wire                 ram_read_op,
     output wire                 ram_write_op,
     output wire [`ADDR_WIDTH]   ram_addr,
-    output wire [255:0]   ram_data_o
+    output wire [255:0]         ram_data_o
 	
 );
 
@@ -79,6 +79,7 @@ module core(
 	wire [`DATA_WIDTH] mem_data__o;
 	wire [`DATA_WIDTH] mem_data__i;
 	wire mem_busy;
+	wire rom_busy;
 	
 	
 	//连接MEM/WB模块的输出与回写阶段的输�???	
@@ -102,9 +103,14 @@ module core(
 	wire[`DATA_WIDTH] branch_target_address;
 
 	wire [5:0] stall;
+	wire stallreq_from_if;
 	wire stallreq_from_id;	
 	wire stallreq_from_ex;
 	wire stallreq_from_mem;
+	assign stallreq_from_if = rom_busy;
+
+	wire [`ADDR_WIDTH] rom_cache_addr_o;
+	wire [`DATA_WIDTH] rom_cache_data_i;
   
   //pc_reg例化
 	pc_reg pc_reg0(
@@ -116,7 +122,7 @@ module core(
 		.PC(pc)
 	);
 	
-  	assign rom_addr_o = pc;
+  	assign rom_cache_addr_o = pc;
 
   	//IF/ID模块例化
 	IF_ID if_id0(
@@ -125,7 +131,7 @@ module core(
 		.stall(stall),
 		.jmp_flag(id_branch_flag_o),
 		.if_pc(pc),
-		.if_inst(rom_data_i),
+		.if_inst(rom_cache_data_i),
 		.id_pc(id_pc_i),
 		.id_inst(id_inst_i)      	
 	);
@@ -335,11 +341,25 @@ module core(
 	ctrl ctrl0(
 		.RST(RST),
 	
+		.stallreq_from_if(stallreq_from_if),
 		.stallreq_from_id(stallreq_from_id),
 		.stallreq_from_ex(stallreq_from_ex),
 		.stallreq_from_mem(stallreq_from_mem),
 
 		.stall(stall)       	
+	);
+
+	inst_cache inst_cache0(
+		.CLK(CLK),
+		.RST(RST),
+		.addr(rom_cache_addr_o),
+		.data_o_(rom_cache_data_i),
+
+		.mem_read(rom_read_op),
+		.mem_addr(rom_addr_o),
+		.mem_data_i(rom_data_i),
+
+		.busy(rom_busy)
 	);
 
 	data_cache data_cache0(

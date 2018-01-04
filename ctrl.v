@@ -3,6 +3,7 @@
 module ctrl(
 	input RST,
 
+	input stallreq_from_if,
 	input stallreq_from_id,
 	input stallreq_from_ex,
 	input stallreq_from_mem,
@@ -17,6 +18,8 @@ module ctrl(
 			stall <= 6'b001111;
 		end else if (stallreq_from_id == 1) begin
 			stall <= 6'b000111;
+		end else if (stallreq_from_if == 1) begin
+			stall <= 6'b000011;
 		end else begin
 			stall <= 6'b000000;
 		end

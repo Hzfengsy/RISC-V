@@ -19,7 +19,7 @@ module data_cache(
 
     output wire busy
 );
-    
+
     wire [`TAG_WIDTH]    tag    = addr[31:10];
     wire [`INDEX_WIDTH]  index  = addr[9:5]; 
     wire [`SELECT_WIDTH] select = addr[4:0];
@@ -32,7 +32,7 @@ module data_cache(
                      (cache_valid[index][0] && cache_tag[index][0] == tag) ? 2'b00 :
                      (cache_valid[index][1] && cache_tag[index][1] == tag) ? 2'b01 : 2'b10;
     wire set = cache_LRU[index] ^ 1;
-
+    reg first_step;
     assign busy = (hit == 2'b10) ? 1'b1 : 1'b0;
     integer i;
     integer j;
@@ -47,7 +47,64 @@ module data_cache(
                     cache_LRU  [i]    <= 0;
                 end
             end
+            first_step   <=  1'b1;
         end else begin
+            if (hit == 2'b10) begin
+                if (first_step) begin
+                    mem_read    <=   1'b1;
+                    mem_addr    <=   {addr[31:5], 5'b00000};
+                    first_step  <=   1'b0;
+                    if (cache_dirty[index][set]) begin
+                        mem_write   <=   1'b1;
+                        mem_data_o[31:0]    <= cache_data[index][set][0];
+                        mem_data_o[63:32]   <= cache_data[index][set][1];
+                        mem_data_o[95:64]   <= cache_data[index][set][2];
+                        mem_data_o[127:96]  <= cache_data[index][set][3];
+                        mem_data_o[159:128] <= cache_data[index][set][4];
+                        mem_data_o[191:160] <= cache_data[index][set][5];
+                        mem_data_o[223:192] <= cache_data[index][set][6];
+                        mem_data_o[255:224] <= cache_data[index][set][7];
+                    end else begin
+                        mem_write   <=   1'b0;
+                        mem_data_o[31:0]    <= `ZeroWord;
+                        mem_data_o[63:32]   <= `ZeroWord;
+                        mem_data_o[95:64]   <= `ZeroWord;
+                        mem_data_o[127:96]  <= `ZeroWord;
+                        mem_data_o[159:128] <= `ZeroWord;
+                        mem_data_o[191:160] <= `ZeroWord;
+                        mem_data_o[223:192] <= `ZeroWord;
+                        mem_data_o[255:224] <= `ZeroWord;
+                    end
+                end else begin
+                    cache_data[index][set][0] <= mem_data_i[31:0];
+                    cache_data[index][set][1] <= mem_data_i[63:32];
+                    cache_data[index][set][2] <= mem_data_i[95:64];
+                    cache_data[index][set][3] <= mem_data_i[127:96];
+                    cache_data[index][set][4] <= mem_data_i[159:128];
+                    cache_data[index][set][5] <= mem_data_i[191:160];
+                    cache_data[index][set][6] <= mem_data_i[223:192];
+                    cache_data[index][set][7] <= mem_data_i[255:224];
+                    cache_valid[index][set]   <= 1'b1;
+                    cache_tag[index][set]     <= tag;
+                    cache_dirty[index][set]   <= 1'b0;
+                    mem_read    <=   1'b0;
+                    mem_addr    <=    `ZeroWord;
+                    first_step  <=   1'b1;
+                end
+            end
+            else begin
+                mem_read    <=   1'b0;
+                mem_write   <=   1'b0;
+                mem_addr    <=    `ZeroWord;
+                mem_data_o[31:0]    <= `ZeroWord;
+                mem_data_o[63:32]   <= `ZeroWord;
+                mem_data_o[95:64]   <= `ZeroWord;
+                mem_data_o[127:96]  <= `ZeroWord;
+                mem_data_o[159:128] <= `ZeroWord;
+                mem_data_o[191:160] <= `ZeroWord;
+                mem_data_o[223:192] <= `ZeroWord;
+                mem_data_o[255:224] <= `ZeroWord;
+            end
             if (write_op) begin
                 if (hit < 2'b10) begin
                     if (mask[3] == 1'b1) begin
@@ -76,59 +133,8 @@ module data_cache(
                 cache_LRU[index] = hit;
             end 
         end else begin
-            data_o <= `ZeroWord;
+            data_o = `ZeroWord;
         end
     end
 
-    always @(CLK) begin
-        if (hit == 2'b10) begin
-            mem_read    =   1'b1;
-            mem_addr    =   {addr[31:5], 5'b00000};
-            if (cache_dirty[index][set]) begin
-                mem_write   =   1'b1;
-                mem_data_o[31:0]    = cache_data[index][set][0];
-                mem_data_o[63:32]   = cache_data[index][set][1];
-                mem_data_o[95:64]   = cache_data[index][set][2];
-                mem_data_o[127:96]  = cache_data[index][set][3];
-                mem_data_o[159:128] = cache_data[index][set][4];
-                mem_data_o[191:160] = cache_data[index][set][5];
-                mem_data_o[223:192] = cache_data[index][set][6];
-                mem_data_o[255:224] = cache_data[index][set][7];
-            end else begin
-                mem_write   <=   1'b0;
-                mem_data_o[31:0]    = `ZeroWord;
-                mem_data_o[63:32]   = `ZeroWord;
-                mem_data_o[95:64]   = `ZeroWord;
-                mem_data_o[127:96]  = `ZeroWord;
-                mem_data_o[159:128] = `ZeroWord;
-                mem_data_o[191:160] = `ZeroWord;
-                mem_data_o[223:192] = `ZeroWord;
-                mem_data_o[255:224] = `ZeroWord;
-            end
-            cache_data[index][set][0] = mem_data_i[31:0];
-            cache_data[index][set][1] = mem_data_i[63:32];
-            cache_data[index][set][2] = mem_data_i[95:64];
-            cache_data[index][set][3] = mem_data_i[127:96];
-            cache_data[index][set][4] = mem_data_i[159:128];
-            cache_data[index][set][5] = mem_data_i[191:160];
-            cache_data[index][set][6] = mem_data_i[223:192];
-            cache_data[index][set][7] = mem_data_i[255:224];
-            cache_valid[index][set]   = 1'b1;
-            cache_tag[index][set]     = tag;
-            cache_dirty[index][set]   = 1'b0;
-        end
-        else begin
-            mem_read    =   1'b0;
-            mem_write   =   1'b0;
-            mem_addr    =    `ZeroWord;
-            mem_data_o[31:0]    = `ZeroWord;
-            mem_data_o[63:32]   = `ZeroWord;
-            mem_data_o[95:64]   = `ZeroWord;
-            mem_data_o[127:96]  = `ZeroWord;
-            mem_data_o[159:128] = `ZeroWord;
-            mem_data_o[191:160] = `ZeroWord;
-            mem_data_o[223:192] = `ZeroWord;
-            mem_data_o[255:224] = `ZeroWord;
-        end
-    end
 endmodule

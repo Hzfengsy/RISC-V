@@ -10,7 +10,7 @@ module sim();
       
     initial begin
         rst = 1'b1;
-        #30 rst= 1'b0;
+        #29 rst= 1'b0;
         #4100 $stop;
     end
        
