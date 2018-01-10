@@ -120,9 +120,11 @@
 `define SET_WIDTH       1:0
 `define SET_NUM           2
 `define TAG_WIDTH      21:0
-`define INDEX_WIDTH     4:0
-`define SELECT_WIDTH    4:0
-`define DATA_ROW_WIDTH 31:0
-`define DATA_ROWS        32
-`define DATA_COL_WIDTH  7:0
-`define DATA_COLS         8
+`define INDEX_WIDTH     5:0
+`define SELECT_WIDTH    3:0
+`define DATA_ROW_WIDTH 63:0
+`define DATA_ROWS        64
+`define DATA_COL_WIDTH  3:0
+`define DATA_COLS         4
+`define BENCH_WIDTH   127:0
+

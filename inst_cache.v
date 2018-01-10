@@ -9,15 +9,19 @@ module inst_cache(
 
     output reg                mem_read,
     output reg [`ADDR_WIDTH]  mem_addr,
-    input [255:0]       mem_data_i,
+    input [`BENCH_WIDTH]      mem_data_i,
+
+    input                     mem_busy,
+    input                     mem_done,
 
     output wire busy
 );
     reg [`ADDR_WIDTH] data_o;
-    assign data_o_ = {data_o[7:0], data_o[15:8], data_o[23:16], data_o[31:24]};
+    assign data_o_ = data_o;
+    // assign data_o_ = {data_o[7:0], data_o[15:8], data_o[23:16], data_o[31:24]};
     wire [`TAG_WIDTH]    tag    = addr[31:10];
-    wire [`INDEX_WIDTH]  index  = addr[9:5]; 
-    wire [`SELECT_WIDTH] select = addr[4:0];
+    wire [`INDEX_WIDTH]  index  = addr[9:4]; 
+    wire [`SELECT_WIDTH] select = addr[3:0];
     reg  [`DATA_WIDTH]   cache_data [`DATA_ROW_WIDTH][`SET_WIDTH][`DATA_COL_WIDTH];
     reg  [`TAG_WIDTH]    cache_tag  [`DATA_ROW_WIDTH][`SET_WIDTH];
     reg                  cache_valid[`DATA_ROW_WIDTH][`SET_WIDTH];
@@ -32,7 +36,7 @@ module inst_cache(
     integer j;
     integer k;
     
-    always @ (posedge CLK) begin
+    always @ (*) begin
         if (RST) begin
             for (i = 0; i < `DATA_ROWS; i = i + 1) begin
                 for (j = 0; j < `SET_NUM; j = j + 1) begin
@@ -46,19 +50,18 @@ module inst_cache(
         end
         else begin
             if (hit == 2'b10) begin
-                if (first_step) begin
-                    mem_read    <=   1'b1;
-                    mem_addr    <=   {addr[31:5], 5'b00000};
-                    first_step  <=   1'b0;
-                end else begin
+                mem_read    <=   1'b1;
+                mem_addr    <=   {addr[31:4], 4'b0000};
+                first_step  <=   1'b0;
+                if (mem_done) begin
                     cache_data[index][set][0] <= mem_data_i[31:0];
                     cache_data[index][set][1] <= mem_data_i[63:32];
                     cache_data[index][set][2] <= mem_data_i[95:64];
                     cache_data[index][set][3] <= mem_data_i[127:96];
-                    cache_data[index][set][4] <= mem_data_i[159:128];
-                    cache_data[index][set][5] <= mem_data_i[191:160];
-                    cache_data[index][set][6] <= mem_data_i[223:192];
-                    cache_data[index][set][7] <= mem_data_i[255:224];
+                    // cache_data[index][set][4] <= mem_data_i[159:128];
+                    // cache_data[index][set][5] <= mem_data_i[191:160];
+                    // cache_data[index][set][6] <= mem_data_i[223:192];
+                    // cache_data[index][set][7] <= mem_data_i[255:224];
                     cache_valid[index][set]   <= 1'b1;
                     cache_tag[index][set]     <= tag;
                     mem_read    <=   1'b0;
@@ -75,7 +78,7 @@ module inst_cache(
     
     always @ (*) begin
         if (hit < 2'b10) begin
-            data_o           = cache_data[index][hit][select[4:2]];
+            data_o           = cache_data[index][hit][select[3:2]];
             cache_LRU[index] = hit;
         end 
     end

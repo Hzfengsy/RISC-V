@@ -1,98 +1,77 @@
-`timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 2017/12/12 13:30:58
-// Design Name: 
-// Module Name: mem_ctrl
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
-//`include "config.vh"
+module mem_ctrl(
+    input CLK,
+    input RST,
+    input read_op1,
+    input read_op2,
+    input write_op,
+    input [`ADDR_WIDTH]        addr1,
+    input [`ADDR_WIDTH]        addr2,
+    input [`BENCH_WIDTH]       data2_i,
+    output wire [`BENCH_WIDTH]  data1_o,
+    output wire [`BENCH_WIDTH]  data2_o,
+	input [15:0]               mask,
+    output wire busy1,
+    output wire done1,
+    output wire busy2,
+    output wire done2,
 
-//module mem_ctrl
-//#(
-//parameter PORT_COUNT = 2,
-//parameter DATA_WIDTH_BYTE = 4,
-//parameter ADDR_WIDTH_BYTE = 4
-//)
-//(
-//    CLK, RST,
+    output wire Tx,
+    input Rx
+);
+    wire 		UART_send_flag;
+	wire [7:0]	UART_send_data;
+	wire 		UART_recv_flag;
+	wire [7:0]	UART_recv_data;
+	wire		UART_sendable;
+	wire		UART_receivable;
 	
-//	send_flag, send_data, send_length,
-//	recv_flag, recv_data, recv_length,
-//	//sendable, receivable,
-//	rw_flag,                                  //0-read, 1-wirte
-//	queue,
-//	_addr,
-//	_read_data, _write_data, _write_mask,
-//    busy, done
-//);
-//    localparam DATA_WIDTH = 	8 * DATA_WIDTH_BYTE;
-//    localparam ADDR_WIDTH =     8 * ADDR_WIDTH_BYTE;
-//    localparam LENGTH_WIDTH =   `CLOG2(DATA_WIDTH_BYTE) + 1;
-//    localparam PORT_COUNT_BIT = `CLOG2(PORT_COUNT);
-//    localparam SEND_BYTE = 		DATA_WIDTH_BYTE + ADDR_WIDTH_BYTE + DATA_WIDTH_BYTE / 8 + 1;
-//    input                        CLK, RST;
-//    output reg                   send_flag;
-//    output reg [SEND_BYTE*8-1:0] send_data;
-//    output reg [4:0]             send_length;
-//    output reg                   recv_flag;
-//    input [SEND_BYTE*8-1:0]      recv_data;
-//    input [4:0]                  recv_length;
-//    //input                        sendable;
-//    //input                        receivable;
-//    input [PORT_COUNT-1:0]       rw_flag;
-//    input [PORT_COUNT-1:0]       queue;
-//    input [PORT_COUNT*ADDR_WIDTH-1:0]      _addr;
-//    output [PORT_COUNT*DATA_WIDTH-1:0]     _read_data;
-//    input [PORT_COUNT*DATA_WIDTH-1:0]      _write_data;
-//    input [PORT_COUNT*DATA_WIDTH_BYTE-1:0] _write_mask;
-//    output reg [PORT_COUNT-1:0]	   		   busy;
-//    output reg [PORT_COUNT-1:0]            done;
-//    wire [ADDR_WIDTH-1:0] 		addr[PORT_COUNT-1:0];
-//    reg  [DATA_WIDTH-1:0] 		read_data[PORT_COUNT-1:0];
-//    wire [DATA_WIDTH-1:0]       write_data[PORT_COUNT-1:0];
-//    wire [DATA_WIDTH_BYTE-1:0]  write_mask[PORT_COUNT-1:0];
-    
-//    genvar i;
-//    generate
-//        for(i = 0; i<PORT_COUNT; i=i+1) begin
-//            assign addr[i]       = _addr[(i+1)*ADDR_WIDTH-1:i*ADDR_WIDTH];
-//            assign write_data[i] = _write_data[(i+1)*DATA_WIDTH-1:i*DATA_WIDTH];
-//            assign write_mask[i] = _write_mask[(i+1)*DATA_WIDTH_BYTE-1:i*DATA_WIDTH_BYTE];
-//            assign _read_data[(i+1)*DATA_WIDTH-1:i*DATA_WIDTH] = read_data[i];
-//        end
-//    endgenerate
-    
-//    integer j;
-//    always @(posedge CLK or posedge RST) begin
-//        send_flag <= 0;
-//        recv_flag <= 0;
-//        done <= 0;
-//        if (RST) begin
-//            busy <= 0;
-//            for(j=0; j<PORT_COUNT; j=j+1) begin
-//                read_data[j] <= 0;
-//                pending_flag[j] <= 0;
-//                pending_addr[j] <= 0;
-//                pending_write_data[j] <= 0;
-//                pending_write_mask[j] <= 0;
-//            end
-//        end else begin
-//            if (queue[1]) begin
-                
-//            else end
-//        end
-//    end
-//endmodule
+	uart_comm UART(
+		CLK, RST,
+		UART_send_flag, UART_send_data,
+		UART_recv_flag, UART_recv_data,
+		UART_sendable, UART_receivable,
+		Tx, Rx);
+	
+	localparam CHANNEL_BIT = 1;
+	localparam MESSAGE_BIT = 184;
+	localparam CHANNEL = 1 << CHANNEL_BIT;
+	
+	wire 					COMM_read_flag[CHANNEL-1:0];
+	wire [MESSAGE_BIT-1:0]	COMM_read_data[CHANNEL-1:0];
+	wire [4:0]				COMM_read_length[CHANNEL-1:0];
+	wire 					COMM_write_flag[CHANNEL-1:0];
+	wire [MESSAGE_BIT-1:0]	COMM_write_data[CHANNEL-1:0];
+	wire [4:0]				COMM_write_length[CHANNEL-1:0];
+	wire					COMM_readable[CHANNEL-1:0];
+	wire					COMM_writable[CHANNEL-1:0];
+	
+	multchan_comm #(.MESSAGE_BIT(MESSAGE_BIT), .CHANNEL_BIT(CHANNEL_BIT)) COMM(
+		CLK, RST,
+		UART_send_flag, UART_send_data,
+		UART_recv_flag, UART_recv_data,
+		UART_sendable, UART_receivable,
+		{COMM_read_flag[1], COMM_read_flag[0]},
+		{COMM_read_length[1], COMM_read_data[1], COMM_read_length[0], COMM_read_data[0]},
+		{COMM_write_flag[1], COMM_write_flag[0]},
+		{COMM_write_length[1], COMM_write_data[1], COMM_write_length[0], COMM_write_data[0]},
+		{COMM_readable[1], COMM_readable[0]},
+		{COMM_writable[1], COMM_writable[0]});
+	
+	wire [2*2-1:0]	MEM_rw_flag;
+	wire [2*32*4-1:0]	MEM_read_data;
+	wire [2*32*4-1:0]	MEM_write_data;
+
+    assign MEM_rw_flag[1:0] = read_op1 ? 2'b01 : 2'b00;
+    assign MEM_rw_flag[3:2] = read_op2 ? 2'b01 : (write_op ? 2'b10 : 2'b00);
+    assign MEM_write_data[255:128] = data2_i;
+	
+	controller CTRL(
+		CLK, RST,
+		COMM_write_flag[0], COMM_write_data[0], COMM_write_length[0],
+		COMM_read_flag[0], COMM_read_data[0], COMM_read_length[0],
+		COMM_writable[0], COMM_readable[0],
+		MEM_rw_flag, {addr2, addr1},
+		{data2_o, data1_o}, MEM_write_data, {mask, 16'h0000},
+		{busy2, busy1}, {done2, done1});
+
+endmodule

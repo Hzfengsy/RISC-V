@@ -6,16 +6,21 @@ module core(
 	input CLK,
 	input RST,
 	
- 
 	output wire                 rom_read_op,
-	input [255:0]               rom_data_i,
+	input [`BENCH_WIDTH]        rom_data_i,
 	output wire [`DATA_WIDTH]   rom_addr_o,
 	
-	input [255:0]               ram_data_i,
+	input [`BENCH_WIDTH]        ram_data_i,
     output wire                 ram_read_op,
     output wire                 ram_write_op,
     output wire [`ADDR_WIDTH]   ram_addr,
-    output wire [255:0]         ram_data_o
+    output wire [`BENCH_WIDTH]  ram_data_o,
+	output wire [15:0]          ram_mask,
+
+	input busy1,
+    input done1,
+    input busy2,
+    input done2
 	
 );
 
@@ -23,7 +28,7 @@ module core(
 	wire[`ADDR_WIDTH] id_pc_i;
 	wire[`DATA_WIDTH] id_inst_i;
 	
-	//连接译码阶段ID模块的输出与ID/EX模块的输�???
+	//连接译码阶段ID模块的输出与ID/EX模块的输�????
 	wire[`ALU_OP_WIDTH] id_aluop_o;
 	wire[`DATA_WIDTH] id_reg1_o;
 	wire[`DATA_WIDTH] id_reg2_o;
@@ -34,7 +39,7 @@ module core(
     wire[`DATA_WIDTH] id_inst_o;
 	wire[`DATA_WIDTH] id_mem_wdata_o;
 	
-	//连接ID/EX模块的输出与执行阶段EX模块的输�???
+	//连接ID/EX模块的输出与执行阶段EX模块的输�????
 	wire[`ALU_OP_WIDTH] ex_aluop_i;
 	wire[`DATA_WIDTH] ex_reg1_i;
 	wire[`DATA_WIDTH] ex_reg2_i;
@@ -45,7 +50,7 @@ module core(
     wire[`DATA_WIDTH] ex_inst_i;
 	wire[`DATA_WIDTH] ex_mem_wdata_i;
 	
-	//连接执行阶段EX模块的输出与EX/MEM模块的输�???
+	//连接执行阶段EX模块的输出与EX/MEM模块的输�????
 	wire ex_reg_op_o;
 	wire[`REG_WIDTH] ex_rd_o;
 	wire[`DATA_WIDTH] ex_data_o;
@@ -56,7 +61,7 @@ module core(
 	wire[`DATA_WIDTH] ex_reg1_o;
 	wire[`DATA_WIDTH] ex_reg2_o;	
 
-	//连接EX/MEM模块的输出与访存阶段MEM模块的输�???
+	//连接EX/MEM模块的输出与访存阶段MEM模块的输�????
 	wire mem_reg_op_i;
 	wire[`REG_WIDTH] mem_rd_i;
 	wire[`DATA_WIDTH] mem_data_i;
@@ -67,7 +72,7 @@ module core(
 	wire[`DATA_WIDTH] mem_reg1_i;
 	wire[`DATA_WIDTH] mem_reg2_i;		
 
-	//连接访存阶段MEM模块的输出与MEM/WB模块的输�???
+	//连接访存阶段MEM模块的输出与MEM/WB模块的输�????
 	wire mem_reg_op_o;
 	wire[`REG_WIDTH] mem_rd_o;
 	wire[`DATA_WIDTH] mem_data_o;
@@ -82,7 +87,7 @@ module core(
 	wire rom_busy;
 	
 	
-	//连接MEM/WB模块的输出与回写阶段的输�???	
+	//连接MEM/WB模块的输出与回写阶段的输�????	
 	wire wb_reg_op_i;
 	wire[`REG_WIDTH] wb_rd_i;
 	wire[`DATA_WIDTH] wb_data_i;
@@ -158,14 +163,14 @@ module core(
 
 	    .is_in_delayslot_i(is_in_delayslot_i),
 
-		//送到regfile的信�???
+		//送到regfile的信�????
 		.reg1_op(reg1_read),
 		.reg2_op(reg2_read), 	  
 
 		.reg1_addr(reg1_addr),
 		.reg2_addr(reg2_addr), 
 	  
-		//送到ID/EX模块的信�???
+		//送到ID/EX模块的信�????
 		.ALU_op(id_aluop_o),
 		.src_1(id_reg1_o),
 		.src_2(id_reg2_o),
@@ -219,7 +224,7 @@ module core(
 		.id_inst(id_inst_o),	
 		.id_mem_wdata(id_mem_wdata_o),
 	
-		//传�?�到执行阶段EX模块的信�???
+		//传�?�到执行阶段EX模块的信�????
 		.ex_AluOp(ex_aluop_i),
 		.ex_reg1(ex_reg1_i),
 		.ex_reg2(ex_reg2_i),
@@ -236,7 +241,7 @@ module core(
 	EX ex0(
 		.RST(RST),
 	
-		//送到执行阶段EX模块的信�???
+		//送到执行阶段EX模块的信�????
 		.AluOP(ex_aluop_i),
 		.src1(ex_reg1_i),
 		.src2(ex_reg2_i),
@@ -268,7 +273,7 @@ module core(
 	  
 	  	.stall(stall),
 	  
-		//来自执行阶段EX模块的信�???	
+		//来自执行阶段EX模块的信�????	
 		.ex_rd(ex_rd_o),
 		.ex_rd_op(ex_reg_op_o),
 		.ex_rd_data(ex_data_o),
@@ -277,7 +282,7 @@ module core(
 		.ex_mem_addr(ex_mem_addr_o),	
 		.ex_mem_wdata(ex_mem_wdata_o),
 
-		//送到访存阶段MEM模块的信�???
+		//送到访存阶段MEM模块的信�????
 		.mem_rd(mem_rd_i),
 		.mem_rd_op(mem_reg_op_i),
 		.mem_rd_data(mem_data_i),
@@ -291,7 +296,7 @@ module core(
 	mem mem0(
 		.RST(RST),
 	
-		//来自EX/MEM模块的信�???	
+		//来自EX/MEM模块的信�????	
 		.rd(mem_rd_i),
 		.rd_op(mem_reg_op_i),
 		.rd_data(mem_data_i),
@@ -302,16 +307,16 @@ module core(
 		.mem_addr(mem_mem_addr_i),
 		.mem_wdata_i(mem_mem_wdata_i),
 	
-		//来自memory的信�???
+		//来自memory的信�????
 		.mem_data(mem_data__o),
 		.busy(mem_busy),
 	  
-		//送到MEM/WB模块的信�???
+		//送到MEM/WB模块的信�????
 		.rd_o(mem_rd_o),
 		.rd_op_o(mem_reg_op_o),
 		.rd_data_o(mem_data_o),
 		
-		//送到memory的信�???
+		//送到memory的信�????
 		.mem_addr_o(mem_addr),
 		.mem_write(mem_write_op),
 		.mem_read(mem_read_op),
@@ -327,12 +332,12 @@ module core(
 
     	.stall(stall),
 
-		//来自访存阶段MEM模块的信�???	
+		//来自访存阶段MEM模块的信�????	
 		.mem_rd(mem_rd_o),
 		.mem_rd_op(mem_reg_op_o),
 		.mem_rd_data(mem_data_o),							
 	
-		//送到回写阶段的信�???
+		//送到回写阶段的信�????
 		.wb_rd(wb_rd_i),
 		.wb_rd_op(wb_reg_op_i),
 		.wb_rd_data(wb_data_i)							       	
@@ -359,6 +364,9 @@ module core(
 		.mem_addr(rom_addr_o),
 		.mem_data_i(rom_data_i),
 
+		.mem_busy(busy1),
+		.mem_done(done1),
+
 		.busy(rom_busy)
 	);
 
@@ -377,6 +385,10 @@ module core(
 		.mem_addr(ram_addr),
 		.mem_data_i(ram_data_i),
 		.mem_data_o(ram_data_o),
+		.mem_mask(ram_mask),
+
+		.mem_busy(busy2),
+		.mem_done(done2),
 
 		.busy(mem_busy)
 	);

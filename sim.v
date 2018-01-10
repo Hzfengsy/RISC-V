@@ -5,18 +5,29 @@ module sim();
     reg     rst;
     initial begin
         CLOCK_50 = 1'b0;
-        forever #2 CLOCK_50 = ~CLOCK_50;
+        forever #1 CLOCK_50 = ~CLOCK_50;
     end
       
     initial begin
         rst = 1'b1;
-        #29 rst= 1'b0;
-        #4100 $stop;
+        #10.5 rst= 1'b0;
     end
+    wire Tx;
+    wire Rx;
        
-  RISC_V RISC_V0(
+    RISC_V RISC_V0(
 		.CLK(CLOCK_50),
-		.RST(rst)	
+		.RST(rst),
+		
+		.Tx(Tx),
+		.Rx(Rx)	
 	);
+	
+	sim_memory sim_memory0(
+        .CLK(CLOCK_50),
+        .RST(rst),
+        .Tx(Rx),
+        .Rx(Tx)
+        );
 
 endmodule
